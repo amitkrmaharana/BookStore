@@ -1,0 +1,7 @@
+venv
+migrations
+.env
+book_store_errors.log
+.idea/
+__pycache__/
+main.py
