@@ -1,5 +1,5 @@
 pipeline {
-  agent any
+  agent 'python 3.8'
   stages {
     stage('build') {
       steps {
