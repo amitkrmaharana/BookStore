@@ -3,7 +3,6 @@ pipeline {
   stages {
     stage('build') {
       steps {
-        sh 'chmod 777 /var/run/docker.sock'
         sh 'pip install -r requirements.txt'
       }
     }
