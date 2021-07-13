@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "title": "Book Store"
   },
-  "host": "127.0.0.1:5000",
+  "host": "13.127.221.52:8000",
   "tags": [
     {
       "name": "Book Store",
