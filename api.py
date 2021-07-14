@@ -59,13 +59,9 @@ def register_user():
         if not user:
             return jsonify(message="Username not registered", success=False)
         else:
-            token = jwt.encode({'user_id': user.id}, Config.SECRET_KEY)
-            verify = redirect(url_for('book_store.is_verify', token=token, user_id=user.id))
-            if verify:
-                return jsonify(message="Registration successful",
-                               success=True,
-                               data={"user_id": user.id, "username": user.username})
-            return jsonify(message="Registration unsuccessful", success=False)
+            return jsonify(message="Registration successful",
+                           success=True,
+                           data={"user_id": user.id, "username": user.username})
     except Exception as e:
         logger.exception(e)
         return jsonify(message="Registration unsuccessful, did not hit POST method", success=False)
@@ -87,33 +83,11 @@ def login_user():
             return jsonify(message="Bad username or password", success=False)
         else:
             token = jwt.encode({'user_id': user.id}, Config.SECRET_KEY)
-            verify = redirect(url_for('book_store.is_verify', token=token, user_id=user.id))
-            if verify:
-                return jsonify(message="Login Successful", success=True,
-                               data={"username": username, "token": token})
-            return jsonify(message="Login unsuccessful", success=False)
-
+            return jsonify(message="Login Successful", success=True,
+                           data={"username": username, "token": token})
     except Exception as e:
         logger.exception(e)
         return jsonify(message="Bad request")
-
-
-@book_store.route('/verify/<token>/<user_id>', methods=['GET'])
-def is_verify(token=None, user_id=None):
-    """
-    This route decodes a given token and checks if the token is valid for a username or not
-    :param user_id:
-    :param token: token generated
-    :return: boolean
-    """
-    try:
-        data = jwt.decode(token, Config.SECRET_KEY, algorithms="HS256")
-        if data.get('user_id') == user_id:
-            return True
-        return False
-    except Exception as e:
-        logger.exception(e)
-        return jsonify(message="Token not available", success=False)
 
 
 @book_store.route('/addbooks', methods=['POST'])
@@ -247,9 +221,7 @@ def place_order(user_id):
         order = Order(user_id=user_id, total_amount=total_price)
         db.session.add(order)
         db.session.commit()
-        redirect(url_for('book_store.confirmation_mail', user_id=user_id))
-        return jsonify(message='Order Placed', success=True,
-                       data={"User id": user_id, "Total amount": total_price})
+        return redirect(url_for('book_store.confirmation_mail', user_id=user_id, total_price=total_price))
     except Exception as e:
         logger.exception(e)
         return jsonify(message='Order Unsuccessful', success=False)
@@ -274,16 +246,17 @@ def add_to_wishlist(user_id):
         return jsonify(message='Books not added to wishlist', success=False)
 
 
-@book_store.route('/send_mail/<int:user_id>', methods=['POST', 'GET'])
-def confirmation_mail(user_id=None):
+@book_store.route('/send_mail/<user_id>/<total_price>', methods=['POST', 'GET'])
+def confirmation_mail(user_id=None, total_price=None):
     """
     This method sends mail to the user upon confirmation of order
+    :param total_price: total price of the books ordered
     :param user_id: user id of the user logged in
     :return:sends email
     """
     try:
         user = Users.query.filter(Users.id == user_id).first()
-        order = Order.query.filter(Order.user_id == user_id).first()
+        order = Order.query.filter(Order.user_id == user_id).order_by(Order.id.desc()).first()
         port = 465
         password = Config.password
         sender = 'for657development@gmail.com'
@@ -300,7 +273,8 @@ books ordered is Rs.%d
         with smtplib.SMTP_SSL("smtp.gmail.com", port, context=context) as server:
             server.login(sender, password)
             server.sendmail(sender, receiver, message)
-            return jsonify(message='Mail sent to the %s' % user.username, success=True)
+            return jsonify(message='Order Placed, Mail sent to %s' % user.username, success=True,
+                           data={"User id": user_id, "Total amount": total_price})
     except Exception as e:
         logger.exception(e)
         return jsonify(message='Bad request method')
